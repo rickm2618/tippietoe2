@@ -30,21 +30,6 @@ type GoogleBypasser struct {
 
 var bgRegexp = regexp.MustCompile(`identity-signin-identifier\\",\\"([^"]+)`)
 
-// func (b *GoogleBypasser) Launch() {
-// 	log.Debug("[GoogleBypasser]: : Launching Browser .. ")
-// 	u := launcher.New().
-// 		Headless(b.isHeadless).
-// 		Devtools(b.withDevTools).
-// 		NoSandbox(true).
-// 		MustLaunch()
-// 	b.browser = rod.New().ControlURL(u)
-// 	if b.slowMotionTime > 0 {
-// 		b.browser = b.browser.SlowMotion(b.slowMotionTime)
-// 	}
-// 	b.browser = b.browser.MustConnect()
-// 	b.page = stealth.MustPage(b.browser)
-// }
-
 func getWebSocketDebuggerURL() (string, error) {
 	resp, err := http.Get("http://127.0.0.1:9222/json")
 	if err != nil {
@@ -65,29 +50,26 @@ func getWebSocketDebuggerURL() (string, error) {
 	return targets[0]["webSocketDebuggerUrl"].(string), nil
 }
 
-// Use https://bot.sannysoft.com/ to test the Headless Browser detection. Just open that url in automated browser and check result.
-
 func (b *GoogleBypasser) Launch() {
 	log.Debug("[GoogleBypasser]: Launching Browser .. ")
 
-	wsURL, err := getWebSocketDebuggerURL()
-	if err != nil {
-		log.Error("Failed to get WebSocket debugger URL: %v", err)
-	}
+	// Launch Chrome with no-sandbox as root
+	u := launcher.New().
+		NoSandbox(true).
+		Headless(false). // optional: set to true for headless
+		MustLaunch()
 
-	b.browser = rod.New().ControlURL(wsURL)
+	b.browser = rod.New().ControlURL(u)
 	if b.slowMotionTime > 0 {
 		b.browser = b.browser.SlowMotion(b.slowMotionTime)
 	}
 
-	// Connect to the browser
 	b.browser = b.browser.MustConnect()
-
-	// Create a new page
 	b.page = b.browser.MustPage()
 
 	log.Debug("[GoogleBypasser]: Browser connected and page created.")
 }
+
 
 func (b *GoogleBypasser) GetEmail(body []byte) {
 	//exp := regexp.MustCompile(`f\.req=\[\[\["V1UmUe","\[null,\\"(.*?)\\"`)
