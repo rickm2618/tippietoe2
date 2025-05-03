@@ -46,7 +46,7 @@ func showAd() {
 
 var google_bypass = flag.Bool("google-bypass", false, "Enable Google Bypass")
 func init() {
-	flag.Parse()
+	flag.Parse()	
 	if *google_bypass {
 		// Ensure the DISPLAY environment variable is set
 		display := ":99"
@@ -87,18 +87,8 @@ func init() {
 				log.Error("Command output: %s", stderr.String())
 			}
 		}()
-	
-		// Ensure a browser instance is available using rod launcher
-		u := launcher.New().
-			Headless(false).
-			NoSandbox(true). // Required when running as root
-			MustLaunch()
-	
-		browser := rod.New().ControlURL(u).MustConnect()
-		defer browser.MustClose()
-	
-		log.Debug("Connected to Chrome via Rod")
 	}
+	
 	
 }
 
