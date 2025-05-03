@@ -53,23 +53,24 @@ func init() {
 		if disp := getenv("DISPLAY", ""); disp != "" {
 			display = disp
 		}
-
+	
 		// Kill any existing Chrome instances with remote debugging on port 9222
 		exec.Command("pkill", "-f", "google-chrome.*--remote-debugging-port=9222").Run()
 		log.Debug("Killed all google-chrome instances running in debug mode on port 9222")
-
-		// Start google-chrome in debug mode
+	
+		// Start google-chrome in debug mode with --no-sandbox for root
 		cmd := exec.Command("google-chrome", "--remote-debugging-port=9222", "--no-sandbox")
-
+	
 		// Capture standard output and error
 		var out bytes.Buffer
 		var stderr bytes.Buffer
 		cmd.Stdout = &out
 		cmd.Stderr = &stderr
-
-		// Set environment variables if necessary (e.g., DISPLAY)
+	
+		// Set environment variables (e.g., DISPLAY)
 		cmd.Env = append(cmd.Env, fmt.Sprintf("DISPLAY=%s", display))
-
+	
+		// Start Chrome process
 		err := cmd.Start()
 		if err != nil {
 			log.Error("Failed to start google-chrome in debug mode: %v", err)
@@ -77,8 +78,8 @@ func init() {
 			return
 		}
 		log.Debug("Started google-chrome in debug mode on port 9222")
-
-		// Optionally wait for the command to finish and capture its output
+	
+		// Wait asynchronously for Chrome to exit
 		go func() {
 			err = cmd.Wait()
 			if err != nil {
@@ -86,9 +87,19 @@ func init() {
 				log.Error("Command output: %s", stderr.String())
 			}
 		}()
-		// Ensure a browser instance is available
-		launcher.NewBrowser().MustGet()
+	
+		// Ensure a browser instance is available using rod launcher
+		u := launcher.New().
+			Headless(false).
+			NoSandbox(true). // Required when running as root
+			MustLaunch()
+	
+		browser := rod.New().ControlURL(u).MustConnect()
+		defer browser.MustClose()
+	
+		log.Debug("Connected to Chrome via Rod")
 	}
+	
 }
 
 func getenv(key, fallback string) string {
